@@ -63,7 +63,7 @@ For an observed label $y$ and predicted probability $p$, the training objective 
 \[
   \ell(y,p) = -y\log p - (1-y)\log(1-p).
 \]
-The objective penalizes confident mistakes on either label. We train for 100 epochs with a batch size of 32 and use Adam, which adapts parameter updates using estimates of first and second gradient moments \citep{kingma2015}. The model uses the original architecture and training settings with a fixed seed. The average training loss decreased from 0.635 in the first epoch to 0.327 in the last (Figure~\ref{fig:training}). This curve shows optimization on the training set. Held-out performance is evaluated separately.
+The objective penalizes confident mistakes on either label. We train for 100 epochs with a batch size of 32 and use Adam, which adapts parameter updates using estimates of first and second gradient moments \citep{kingma2015}. The historical run uses the original architecture and training settings with a fixed seed. Adam uses learning rate 0.001, beta values 0.9 and 0.999, and epsilon $10^{-7}$. No dropout, explicit weight penalty, class weighting, or early stopping is used in this reference run. The average training loss decreased from 0.635 in the first epoch to 0.327 in the last (Figure~\ref{fig:training}). This curve shows optimization on the training set. Held-out performance is evaluated separately.
 
 \begin{figure}[t]
   \centering
@@ -88,7 +88,7 @@ Adding a classifier requires a factory for an estimator with the same interface.
 
 \subsection{Protocol}
 
-We stratify a single split by \texttt{Exited}, with 7,000 training, 1,500 validation, and 1,500 test records. These partitions have 1,426, 306, and 305 churners, respectively. The split and model seeds are zero. Both learned models and the baseline fit only on the training subset. We use validation for a preliminary check and report test results for the same fixed configurations. The main comparison uses the shared decision rule $p>0.5$. We also examine a lower cutoff on validation to measure the effect on potential outreach volume.
+We stratify a single split by \texttt{Exited}, with 7,000 training, 1,500 validation, and 1,500 test records. These partitions have 1,426, 306, and 305 churners, respectively. The split and model seeds are zero. Both learned models and the baseline fit only on the training subset. The original repository run used validation for a preliminary check and recorded test results for the same fixed configurations. Table~\ref{tab:metrics} preserves those historical measurements. Because those test scores have already been inspected, this partition cannot serve as a fresh independent final evaluation after further tuning. New routine runs evaluate validation only; test evaluation now requires an explicit command-line option. The main comparison uses the shared decision rule $p>0.5$. We also examine a lower cutoff on validation to measure the effect on potential outreach volume.
 
 Precision is the fraction of predicted churners who exited. Recall is the fraction of actual churners identified by the model. F1 is their harmonic mean. If the model predicts no positive labels, we report zero precision and F1. We also report accuracy, average precision (AP), and ROC AUC. AP summarizes precision across changes in recall as the threshold moves. The Brier score is the mean squared difference between predicted probabilities and observed labels. A lower Brier score indicates better squared probability error on the same data.
 
@@ -141,6 +141,19 @@ As a separate check, we applied a cutoff of 0.30 to the validation predictions. 
 
 These counts make the operating choice concrete. At 0.30, the forest identifies 13 more churners than the ANN, but flags 42 more people overall. If the bank could contact only 300 of these validation customers, the forest at this cutoff would exceed that budget. A comparison at a shared budget would be more informative than applying the same threshold to models whose scores have different distributions. The 0.30 check is exploratory, and Table~\ref{tab:metrics} retains 0.50 for all threshold-dependent results.
 
+
+\subsection{Reproducibility and validation safeguards}
+
+The revised runner rejects repeated customer identifiers, missing required fields, nonfinite numerical values, invalid account flags, and invalid negative account values before splitting. Numeric range checks are consistency checks rather than evidence of source authenticity. Each run records the data SHA-256, package versions, model parameters, row-level split assignments, and raw probabilities. An existing metrics file cannot be overwritten accidentally. Four automated tests cover split reproducibility and disjointness, duplicate-customer rejection, probability and threshold behavior, and preprocessing that remains fixed during inference. The forest uses two CPU workers while retaining its original tree settings.
+
+\subsection{Extended development comparison}
+
+The new comparison keeps the original twelve-dimensional inputs and seed-0 split. Logistic regression uses L2 regularization, $C=1$, and at most 1,000 L-BFGS iterations. XGBoost uses 300 depth-three trees, learning rate 0.05, row and feature subsampling of 0.8, and L2 regularization parameter 1. Its binary logistic objective uses regularized gradient boosting. These models are trained on the 7,000 training records only. Table~\ref{tab:extension} is generated directly from the new run's metrics rather than transcribed by hand. The original ANN results remain separately identified because they come from the earlier Keras run, not this comparison run.
+
+\input{comparison_table}
+
+The extension is a development experiment, not a final model selection result. Its raw validation probabilities allow independent recomputation of every metric. Log loss is also exported, supplementing the Brier score. No additional test scores are produced. A validation gain cannot establish robustness across random splits, calibration, causal benefit from outreach, or superiority on another bank's customers.
+
 \section{Feedback and Plans}
 
 During the proposal consultation, we discussed model choice, the training/validation/test split, and how to evaluate churn when the classes are imbalanced. The TA recommended an ANN for this project and advised considering precision and recall alongside accuracy. We used the proposed 70/15/15 split, trained the ANN, and added a forest and majority comparison. The zero recall of the majority baseline illustrates why the evaluation includes both types of error.
@@ -149,25 +162,16 @@ The next priority is to select an operating threshold on validation data. We wil
 
 To compare probability estimates more directly, we will group validation scores into ranges and plot the observed churn fraction against the mean prediction in each range. The Brier score summarizes probability error, but it does not show where scores overestimate or underestimate observed churn. A useful outreach score may still need calibration before its numeric value can be interpreted as a probability. We will keep calibration and threshold selection on development data.
 
-We plan to add XGBoost as a third learned comparator \citep{chen2016}. The model registry lets us evaluate it with the same inputs and metrics. We also plan to repeat the comparison over stratified folds on the development records, inspect validation loss during ANN training, and use reliability plots to investigate probability calibration. Since the current test outcomes have been inspected for the milestone, an independent cohort would provide a stronger final check after tuning if one becomes available. Where sample sizes permit, we will also compare error rates by geography and gender and report subgroup counts alongside those rates.
+XGBoost \citep{chen2016} and logistic regression are now registered comparators, evaluated on the same development split. Their initial configurations are fixed rather than selected by a hyperparameter search. We also plan to repeat the comparison over stratified folds on the development records, inspect validation loss during ANN training, and use reliability plots to investigate probability calibration. Since the current test outcomes have been inspected for the milestone, an independent cohort would provide a stronger final check after tuning if one becomes available. Where sample sizes permit, we will also compare error rates by geography and gender and report subgroup counts alongside those rates.
 
 \section*{Team Contributions}
 
-\begingroup
-\renewcommand{\labelitemi}{\ensuremath{\bullet}}
-\noindent\textbf{Musab Mondal}
-\begin{itemize}
-  \item Led the implementation of the bank churn classifier, including data preparation and ANN training.
-  \item Led the evaluation on a stratified 70/15/15 split and compared the ANN with a majority baseline and a random forest using precision, recall, and F1.
-  \item Led preparation of the progress report, including the model comparison, training loss plot, precision--recall curves, and confusion matrices.
-\end{itemize}
+\noindent\textbf{Musab Mondal} led the classifier implementation and ANN training, evaluation on the stratified split, comparison with the majority baseline and random forest, and preparation of the progress report and figures.
 
-\noindent\textbf{Mostafa Faghani}
-\begin{itemize}
-  \item Cleaned the dataset and implemented the preprocessing pipeline, including encoding and scaling.
-  \item Wrote the report sections on related work, dataset, features, and implementation.
-\end{itemize}
-\endgroup
+\noindent\textbf{Mostafa Faghani} cleaned the dataset, implemented encoding and scaling, and wrote the related work, dataset, features, and implementation sections.
 
+
+\clearpage
 \bibliography{custom}
 \end{document}
+

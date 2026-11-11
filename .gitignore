@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.venv/
+*.log
+*.aux
+*.blg
+*.bbl
+*.out
+results-development/
+results-reproduction/
+results-extension/models/
+results-ann-check/models/
+results-extension/*.csv
+results-ann-check/*.csv

@@ -11,6 +11,7 @@ from sklearn.metrics import (
     precision_score,
     recall_score,
     roc_auc_score,
+    log_loss,
 )
 from sklearn.pipeline import Pipeline
 
@@ -21,6 +22,11 @@ THRESHOLD = 0.5
 
 
 def evaluate(labels: pd.Series, scores: np.ndarray, threshold: float = THRESHOLD) -> dict:
+    scores = np.asarray(scores, dtype=float)
+    if scores.ndim != 1 or len(scores) != len(labels) or not np.isfinite(scores).all() or ((scores < 0) | (scores > 1)).any():
+        raise ValueError("Expected one finite probability in [0,1] per label.")
+    if not 0 <= threshold <= 1:
+        raise ValueError("Threshold must be between zero and one.")
     predicted = scores > threshold
     return {
         "accuracy": accuracy_score(labels, predicted),
@@ -30,6 +36,7 @@ def evaluate(labels: pd.Series, scores: np.ndarray, threshold: float = THRESHOLD
         "average_precision": average_precision_score(labels, scores),
         "roc_auc": roc_auc_score(labels, scores),
         "brier": brier_score_loss(labels, scores),
+        "log_loss": log_loss(labels, scores, labels=[0, 1]),
         "confusion_matrix": confusion_matrix(labels, predicted, labels=[0, 1]).tolist(),
     }
 
