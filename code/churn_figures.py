@@ -33,7 +33,7 @@ class FigureWriter:
         ax.spines[["top", "right"]].set_visible(False)
         self._save(fig, "class_distribution")
 
-    def precision_recall(self, labels: pd.Series, scores: dict, metrics: dict) -> None:
+    def precision_recall(self, labels: pd.Series, scores: dict, metrics: dict, split="test") -> None:
         fig, ax = plt.subplots(figsize=(4.35, 3.15), layout="constrained")
         ax.axhline(labels.mean(), color="#6E7177", linestyle="--",
                    label=f"No skill (AP {labels.mean():.3f})")
@@ -47,9 +47,9 @@ class FigureWriter:
         ax.set(xlabel="Recall", ylabel="Precision", xlim=(0, 1.02), ylim=(0, 1.03))
         ax.grid(alpha=0.22)
         ax.legend(loc="lower left", fontsize=8, framealpha=0.95)
-        self._save(fig, "test_precision_recall")
+        self._save(fig, f"{split}_precision_recall")
 
-    def confusion_matrices(self, metrics: dict) -> None:
+    def confusion_matrices(self, metrics: dict, split="test") -> None:
         fig, axes = plt.subplots(1, len(metrics), figsize=(2.4 * len(metrics), 2.35),
                                  squeeze=False, layout="constrained")
         for ax, (name, result) in zip(axes[0], metrics.items()):
@@ -63,7 +63,7 @@ class FigureWriter:
             ax.set(xticks=[0, 1], yticks=[0, 1], xticklabels=["Stayed", "Exited"],
                    yticklabels=["Stayed", "Exited"], xlabel="Predicted", title=LABELS.get(name, name))
         axes[0, 0].set_ylabel("Actual")
-        self._save(fig, "test_confusion_matrices")
+        self._save(fig, f"{split}_confusion_matrices")
 
     def training_loss(self, loss: list[float]) -> None:
         fig, ax = plt.subplots(figsize=(4.35, 2.75), layout="constrained")

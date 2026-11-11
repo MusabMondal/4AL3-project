@@ -6,6 +6,7 @@ import numpy as np
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.dummy import DummyClassifier
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.utils.validation import check_is_fitted
 
 
@@ -55,5 +56,15 @@ class ANNClassifier(ClassifierMixin, BaseEstimator):
 MODEL_FACTORIES = {
     "majority": lambda seed: DummyClassifier(strategy="prior"),
     "ann": lambda seed: ANNClassifier(random_state=seed),
-    "random-forest": lambda seed: RandomForestClassifier(n_estimators=200, random_state=seed),
+    "random-forest": lambda seed: RandomForestClassifier(n_estimators=200, random_state=seed, n_jobs=2),
+    "logistic": lambda seed: LogisticRegression(max_iter=1000, random_state=seed),
+    "xgboost": lambda seed: make_xgboost(seed),
 }
+
+
+def make_xgboost(seed):
+    from xgboost import XGBClassifier
+    return XGBClassifier(n_estimators=300, max_depth=3, learning_rate=0.05,
+                         subsample=0.8, colsample_bytree=0.8, reg_lambda=1,
+                         objective="binary:logistic", eval_metric="logloss",
+                         random_state=seed, n_jobs=2)

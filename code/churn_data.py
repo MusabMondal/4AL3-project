@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import pandas as pd
+import numpy as np
 from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
@@ -25,6 +26,15 @@ def load_dataset(path: Path) -> pd.DataFrame:
         raise ValueError("The predictors and labels must be complete for this experiment.")
     if set(data[TARGET].unique()) != {0, 1}:
         raise ValueError("Exited must contain both binary labels, 0 and 1.")
+    if "CustomerId" in data and data.CustomerId.duplicated().any():
+        raise ValueError("Repeated CustomerId values could leak customers across splits.")
+    numeric = [name for name in FEATURES if name not in ("Gender", "Geography")]
+    if not np.isfinite(data[numeric].to_numpy(dtype=float)).all():
+        raise ValueError("Numeric predictors must be finite.")
+    if not data[["HasCrCard", "IsActiveMember"]].isin([0, 1]).all().all():
+        raise ValueError("Account flags must be binary.")
+    if (data[["Age", "Tenure", "Balance", "EstimatedSalary"]] < 0).any().any() or (data.NumOfProducts < 1).any():
+        raise ValueError("Invalid negative values or product count.")
     return data
 
 

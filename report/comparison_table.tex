@@ -1,0 +1,15 @@
+\begin{table}[t]
+\centering\small
+\begin{tabular}{lrrrr}
+\hline
+Model & F1 & AP & AUC & Brier \\
+\hline
+Prior & 0.000 & 0.204 & 0.500 & 0.162 \\
+logistic & 0.302 & 0.480 & 0.774 & 0.135 \\
+Forest & 0.565 & 0.665 & 0.843 & 0.108 \\
+xgboost & 0.575 & 0.694 & 0.863 & 0.103 \\
+\hline
+\end{tabular}
+\caption{New validation-only comparison on the original seed-0 split. Threshold-dependent scores use $p>0.5$. This run does not evaluate test data.}
+\label{tab:extension}
+\end{table}
